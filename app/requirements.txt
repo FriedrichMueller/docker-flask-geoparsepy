@@ -1,1 +1,6 @@
+requests
+flask-sqlalchemy
+psycopg2
+nltk
+geoparsepy
 Flask==0.10.1
