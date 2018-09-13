@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Geoparsing with Geoparsepy</title>
+    <script src="{{url_for('static', filename='jquery-2.2.2.min.js')}}"></script>
+    <script src="{{url_for('static', filename='leaflet/leaflet.js')}}"></script>
+    <link rel="stylesheet" href="{{url_for('static', filename='leaflet/leaflet.css')}}">
+</head>
+<body>
+<center><h2>Hier sind die Ergebnisse: </h2></center>
+
+<p id=result_names></p>
+
+<p id=result_osms></p>
+
+<p id=result_coords></p>
+
+<div id="llmap" style="width:900px; height:500px;"></div>
+<script src="{{url_for('static', filename='demo.js')}}"></script>
+<script>
+var names={{names|tojson}};
+var osms={{osms|tojson}};
+var coords={{coords|tojson}};
+var regExp=/\((.*?)\s/;
+var regExp2=/\s(.*?)\)/;
+var match1=regExp.exec(coords[0])[1];
+var match2=regExp2.exec(coords[0])[1];
+console.log(match1);
+
+
+mymap.setView([-22.1691255,133.8946179],3);
+
+for (i=0; i<names.length; i++) {
+document.getElementById("result_names").innerHTML+=i+" <b>Name:</b>"+names[i]+",<b>OSMID:</b>"+osms[i]+",<b>Coordinates:</b>["+coords[i]+"]<br>";
+//console.log(regExp.exec(coords[i])[1]+regExp2.exec(coords[i])[1]);
+var marker =L.marker([regExp2.exec(coords[i])[1],regExp.exec(coords[i])[1]]).addTo(mymap);
+marker.bindPopup(names[i]+","+osms[i]);
+//mymap.fitBounds(marker);
+}
+
+</script>
+</body>
+</html>
+
