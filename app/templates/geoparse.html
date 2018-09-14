@@ -8,11 +8,12 @@
     <link rel="stylesheet" href="{{url_for('static', filename='leaflet/leaflet.css')}}">
 </head>
 <body>
-<h4>Geben Sie hier Ihren Text ein (Als Demo ist ein Datensatz für Australien und Neuseeland hinterlegt, d.h. es können nur Ortsnamen aus diesem Bereich geparsed werden.):</h4>
-<form method="post" action="/result" >
-    <textarea name="parsetext" placeholder="Gehmer in Acton Park Schnitzel essen und dann in Aberdare ein Eis aber nur wenn in Derbyshire noch Licht brennt" style="width:600px; height:300px;"></textarea>
+<h4>Geben Sie hier Ihren Text (default:DE) ein (Als Demo ist ein Datensatz für Australien und Neuseeland hinterlegt, d.h. es können nur Ortsnamen aus diesem Bereich geparsed werden.):</h4>
+<form method="post" action="/result" target="_blank">
+    <textarea name="parsetext" placeholder="Gehmer in Acton Park Schnitzel essen und dann in Aberdare ein Eis oder doch in Sydney?" style="width:600px; height:300px;"></textarea>
     <br><br>
     <input type="submit" value="Geoparse" name="ok"/>
+(Nimmt beim ersten Ausführen etwas Zeit in Anspruch, da die Datenbank gecached wird)
 </form>
 </body>
 </html>

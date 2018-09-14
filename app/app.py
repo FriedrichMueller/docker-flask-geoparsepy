@@ -2,8 +2,11 @@ import time, os, nltk
 from flask import Flask, render_template, flash, redirect, request, url_for
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
+from flask_caching import Cache
 
 nltk.download ('all')
+
+cached_locations = None
 
 engine= create_engine("postgres://db/openstreetmap")
 DBUSER = 'postgres'
@@ -17,6 +20,11 @@ DBNAME = 'openstreetmap'
 os.system('PGPASSWORD="postgres" pg_restore -h db -p 5432 -U postgres -F t -1 -d openstreetmap data/au_nz_places.tar')
 
 app = Flask(__name__)
+# Initialize flask cache
+cache=Cache(app, config={'CACHE_TYPE':'simple'})
+cache.init_app(app)
+
+
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///students.sqlite3'
 app.config['SQLALCHEMY_DATABASE_URI'] = \
     'postgresql+psycopg2://{user}:{passwd}@{host}:{port}/{db}'.format(
@@ -35,51 +43,12 @@ db.engine.execute("CREATE EXTENSION IF NOT EXISTS postgis;CREATE EXTENSION IF NO
 
 
 
-class students(db.Model):
-    id = db.Column('student_id', db.Integer, primary_key=True)
-    name = db.Column(db.String(100))
-    city = db.Column(db.String(50))
-    addr = db.Column(db.String(200))
 
-    def __init__(self, name, city, addr):
-        self.name = name
-        self.city = city
-        self.addr = addr
-
-
-def database_initialization_sequence():
-    db.create_all()
-    test_rec = students(
-            'John Doe',
-            'Los Angeles',
-            '123 Foobar Ave')
-
-    db.session.add(test_rec)
-    db.session.rollback()
-    db.session.commit()
-
-
-@app.route('/', methods=['GET', 'POST'])
-def home():
-    if request.method == 'POST':
-        if not request.form['name'] or not request.form['city'] or not request.form['addr']:
-            flash('Please enter all the fields', 'error')
-        else:
-            student = students(
-                    request.form['name'],
-                    request.form['city'],
-                    request.form['addr'])
-
-            db.session.add(student)
-            db.session.commit()
-            flash('Record was succesfully added')
-            return redirect(url_for('home'))
-    return render_template('show_all.html', students=students.query.all())
 
 # decorating index function with the app.route with url as /login
-@app.route('/geoparse')
+@app.route('/')
 def index():
-   return render_template('geoparse.html')
+    return render_template('geoparse.html')
 
 
 
@@ -88,6 +57,12 @@ def parse():
    if request.method == 'POST':
         import os, sys, logging, traceback, codecs, datetime, copy, time, ast, math, re, random, shutil, json
         import geoparsepy.config_helper,geoparsepy.common_parse_lib,geoparsepy.PostgresqlHandler,geoparsepy.geo_parse_lib,geoparsepy.geo_preprocess_lib
+        
+        global cached_locations
+        global indexed_locations
+        global indexed_geoms
+        global osmid_lookup
+        global dictGeomResultsCache 
         osms=[]
         coords=[]
         names=[]
@@ -104,9 +79,8 @@ def parse():
                 sent_token_seps = ['\n','\r\n', '\f', u'\u2026'],
                 punctuation = """,;\/:+-#~&*=!?""",
                 )
-
+        
         databaseHandle = geoparsepy.PostgresqlHandler.PostgresqlHandler( 'postgres', 'postgres', 'db', 5432, 'openstreetmap', 600 )
-
         dictLocationIDs = {}
         listFocusArea=['au_nz_places']
         for strFocusArea in listFocusArea :
@@ -115,21 +89,26 @@ def parse():
                 dictLocationIDs[strFocusArea + '_line'] = [-1,-1]
                 dictLocationIDs[strFocusArea + '_point'] = [-1,-1]
 
-        cached_locations = geoparsepy.geo_preprocess_lib.cache_preprocessed_locations( databaseHandle, dictLocationIDs, 'reveal',
-        dictGeospatialConfig )
-        logger.info( 'number of cached locations = ' + str(len(cached_locations)) )
+        if cached_locations is None:
+            cached_locations = geoparsepy.geo_preprocess_lib.cache_preprocessed_locations( databaseHandle, dictLocationIDs, 'reveal',
+            dictGeospatialConfig )
 
-        databaseHandle.close()
 
-        indexed_locations = geoparsepy.geo_parse_lib.calc_inverted_index( cached_locations, dictGeospatialConfig )
-        logger.info( 'number of indexed phrases = ' + str(len(indexed_locations.keys())) )
+            logger.info( 'number of cached locations = ' + str(len(cached_locations)) )
 
-        indexed_geoms = geoparsepy.geo_parse_lib.calc_geom_index( cached_locations )
-        logger.info( 'number of indexed geoms = ' + str(len(indexed_geoms.keys())) )
+            databaseHandle.close()
 
-        osmid_lookup = geoparsepy.geo_parse_lib.calc_osmid_lookup( cached_locations )
+            indexed_locations = geoparsepy.geo_parse_lib.calc_inverted_index( cached_locations, dictGeospatialConfig )
+            logger.info( 'number of indexed phrases = ' + str(len(indexed_locations.keys())) )
 
-        dictGeomResultsCache = {}
+            indexed_geoms = geoparsepy.geo_parse_lib.calc_geom_index( cached_locations )
+            logger.info( 'number of indexed geoms = ' + str(len(indexed_geoms.keys())) )
+
+            osmid_lookup = geoparsepy.geo_parse_lib.calc_osmid_lookup( cached_locations )
+
+            dictGeomResultsCache = {}
+
+
 
         listText = [request.form['parsetext']]
                 #u'hello New York, USA its Bill from Bassett calling',
@@ -208,5 +187,5 @@ if __name__ == '__main__':
             time.sleep(2)
         else:
             dbstatus = True
-    database_initialization_sequence()
+   # database_initialization_sequence()
     app.run(debug=True, host='0.0.0.0')

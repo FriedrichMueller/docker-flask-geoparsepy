@@ -31,15 +31,40 @@ console.log(match1);
 
 mymap.setView([-22.1691255,133.8946179],3);
 
+var CSVcontent="names;osmID;coords\n"
+
 for (i=0; i<names.length; i++) {
 document.getElementById("result_names").innerHTML+=i+" <b>Name:</b>"+names[i]+",<b>OSMID:</b>"+osms[i]+",<b>Coordinates:</b>["+coords[i]+"]<br>";
 //console.log(regExp.exec(coords[i])[1]+regExp2.exec(coords[i])[1]);
 var marker =L.marker([regExp2.exec(coords[i])[1],regExp.exec(coords[i])[1]]).addTo(mymap);
 marker.bindPopup(names[i]+","+osms[i]);
 //mymap.fitBounds(marker);
+CSVcontent += names[i]+";"+osms[i]+";"+coords[i]+"\n"
+
+}
+
+function download_csv() {
+   var filename="geoparse.csv"
+   var blob = new Blob([CSVcontent], { type: 'text/csv;charset=utf-8;' });
+        if (navigator.msSaveBlob) { // IE 10+
+            navigator.msSaveBlob(blob, filename);
+        } else {
+            var link = document.createElement("a");
+            if (link.download !== undefined) { // feature detection
+                // Browsers that support HTML5 download attribute
+                var url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+	}
 }
 
 </script>
+<button onclick="download_csv()">Download CSV</button>
 </body>
 </html>
 
